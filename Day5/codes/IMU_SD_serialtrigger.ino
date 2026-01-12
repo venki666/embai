@@ -1,115 +1,119 @@
 #include <M5Unified.h>
-#include <MadgwickAHRS.h> 
 #include <SD.h>
 
 // --- CONFIGURATION ---
-Madgwick filter;
-const float SENSOR_RATE = 100.0f; // 100Hz Sampling
-unsigned long last_update = 0;
-bool is_recording = false;
+const int SD_CS_PIN = GPIO_NUM_4;  // Chip Select for M5Core2 SD Card
+const int SAMPLE_RATE_HZ = 100;    // Logging Frequency (100Hz)
+const char* FILENAME = "/raw_imu_log.csv";
 
 // --- VARIABLES ---
+bool isRecording = false;
+unsigned long lastLoopTime = 0;
+unsigned long loopInterval = 1000 / SAMPLE_RATE_HZ;
+
 float ax, ay, az;
 float gx, gy, gz;
-float ax_smooth = 0, ay_smooth = 0, az_smooth = 0;
-const float ALPHA = 0.2; // Smoothing factor
-float roll, pitch, yaw;
-
-File logFile;
 
 void setup() {
+  // 1. Initialize M5Stack (Configures I2C, Screen, Power, etc.)
   auto cfg = M5.config();
+  cfg.serial_baudrate = 115200; 
   M5.begin(cfg);
-  
-  // 1. Init Serial
-  Serial.begin(115200); 
-  
-  // 2. Init IMU & Filter
+
+  // 2. Initialize IMU
   M5.Imu.begin();
-  filter.begin(SENSOR_RATE);
 
-  // 3. Init SD Card
-  if (!SD.begin(GPIO_NUM_4, SPI, 25000000)) { 
-    M5.Display.println("SD Failed!");
-  } else {
-    M5.Display.println("SD Ready.");
+  // 3. Initialize SD Card
+  // M5Core2 uses GPIO 4 for SD CS. 
+  // We check if it mounts successfully.
+  if (!SD.begin(SD_CS_PIN, SPI, 25000000)) {
+    M5.Display.fillScreen(TFT_RED);
+    M5.Display.setTextSize(2);
+    M5.Display.setCursor(10, 100);
+    M5.Display.println("SD Card Failed!");
+    M5.Display.println("Insert SD & Reset");
+    while (1); // Halt if no SD
   }
-  
-  // 4. UI Setup
-  M5.Display.setTextSize(2);
-  M5.Display.setCursor(0, 40);
-  M5.Display.println("Send 's' to Record");
 
-  // 5. PRINT CSV HEADER (Crucial for Visualization)
-  // This tells the visualizer/logger what the columns are
-  Serial.println("timestamp,ax_raw,ay_raw,az_raw,ax_smooth,ay_smooth,az_smooth,roll,pitch,yaw");
+  // 4. Setup Display
+  M5.Display.fillScreen(TFT_BLACK);
+  M5.Display.setTextSize(3);
+  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.Display.setCursor(10, 10);
+  M5.Display.println("IMU LOGGER");
+  
+  updateStatusScreen();
+
+  // 5. Print CSV Header to Serial
+  // Allows tools like Serial Plotter to identify columns
+  Serial.println("timestamp,ax,ay,az,gx,gy,gz");
 }
 
 void loop() {
-  M5.update();
+  M5.update(); // Update button states (handled by M5Unified internally)
 
-  // --- UART TRIGGER LOGIC ---
+  // --- 1. CHECK FOR UART COMMAND 's' ---
   if (Serial.available()) {
     char cmd = Serial.read();
-    if (cmd == 's' || cmd == 'S') { // Toggle on 's'
-      is_recording = !is_recording;
+    if (cmd == 's' || cmd == 'S') {
+      isRecording = !isRecording;
+      updateStatusScreen();
       
-      // Visual Feedback on Screen
-      if (is_recording) {
-        M5.Display.fillScreen(GREEN);
-        M5.Display.setCursor(10, 50);
-        M5.Display.setTextColor(BLACK);
-        M5.Display.print("RECORDING TO SD...");
-        
-        // Open/Create File
-        logFile = SD.open("/imu_log.csv", FILE_APPEND);
-        if (!logFile) {
-           logFile = SD.open("/imu_log.csv", FILE_WRITE);
-           // Write header to file if it's new
-           logFile.println("timestamp,ax_raw,ay_raw,az_raw,ax_smooth,ay_smooth,az_smooth,roll,pitch,yaw"); 
+      // Optional: Add a separator line in SD file to mark new session
+      if (isRecording) {
+        File logFile = SD.open(FILENAME, FILE_APPEND);
+        if (logFile) {
+          logFile.println("--- NEW SESSION ---");
+          logFile.close();
         }
-      } else {
-        M5.Display.fillScreen(BLACK);
-        M5.Display.setCursor(10, 50);
-        M5.Display.setTextColor(WHITE);
-        M5.Display.print("STOPPED");
-        M5.Display.setCursor(10, 80);
-        M5.Display.print("Send 's' to start");
-        
-        if (logFile) logFile.close();
       }
     }
   }
-  
-  // --- SENSOR LOOP (100Hz) ---
-  if (millis() - last_update >= (1000.0 / SENSOR_RATE)) {
-    last_update = millis();
-    unsigned long ts = millis();
 
-    // 1. Get Data
+  // --- 2. SAMPLING LOOP (100Hz) ---
+  if (millis() - lastLoopTime >= loopInterval) {
+    lastLoopTime = millis();
+    unsigned long timestamp = millis();
+
+    // Read Raw Data
     M5.Imu.getAccelData(&ax, &ay, &az);
     M5.Imu.getGyroData(&gx, &gy, &gz);
 
-    // 2. Filter (Smoothing)
-    ax_smooth = (ALPHA * ax) + ((1.0 - ALPHA) * ax_smooth);
-    ay_smooth = (ALPHA * ay) + ((1.0 - ALPHA) * ay_smooth);
-    az_smooth = (ALPHA * az) + ((1.0 - ALPHA) * az_smooth);
+    // --- 3. SERIAL OUTPUT (Always Stream) ---
+    // Format: timestamp, ax, ay, az, gx, gy, gz
+    Serial.printf("%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", 
+                  timestamp, ax, ay, az, gx, gy, gz);
 
-    // 3. Fusion (Madgwick)
-    filter.updateIMU(gx, gy, gz, ax, ay, az);
-    roll  = filter.getRoll();
-    pitch = filter.getPitch();
-    yaw   = filter.getYaw();
-
-    // 4. STREAM ENTIRE DATA TO SERIAL (CSV Format)
-    // format: timestamp, ax, ay, az, ax_s, ay_s, az_s, roll, pitch, yaw
-    Serial.printf("%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", 
-                  ts, ax, ay, az, ax_smooth, ay_smooth, az_smooth, roll, pitch, yaw);
-
-    // 5. LOG TO SD (If Active)
-    if (is_recording && logFile) {
-      logFile.printf("%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", 
-                     ts, ax, ay, az, ax_smooth, ay_smooth, az_smooth, roll, pitch, yaw);
+    // --- 4. SD CARD LOGGING (Only if Recording) ---
+    if (isRecording) {
+      File logFile = SD.open(FILENAME, FILE_APPEND);
+      if (logFile) {
+        logFile.printf("%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", 
+                       timestamp, ax, ay, az, gx, gy, gz);
+        logFile.close();
+      } else {
+        // Simple error indication on screen corner if write fails
+        M5.Display.fillCircle(310, 10, 5, TFT_RED); 
+      }
     }
+  }
+}
+
+// Helper to update the UI
+void updateStatusScreen() {
+  M5.Display.fillRect(0, 100, 320, 100, TFT_BLACK); // Clear area
+  M5.Display.setCursor(20, 110);
+  M5.Display.setTextSize(3);
+  
+  if (isRecording) {
+    M5.Display.setTextColor(TFT_RED, TFT_BLACK);
+    M5.Display.println("RECORDING...");
+    M5.Display.setTextSize(2);
+    M5.Display.println("(Send 's' to Stop)");
+  } else {
+    M5.Display.setTextColor(TFT_GREEN, TFT_BLACK);
+    M5.Display.println("IDLE");
+    M5.Display.setTextSize(2);
+    M5.Display.println("(Send 's' to Start)");
   }
 }
