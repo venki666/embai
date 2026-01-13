@@ -5,11 +5,13 @@
 Codes @ http://github.com/venki666/embai
 
 *Task 1*
+
 - Collect raw data using the code IMU_SD_serialtrigger.ino
 - Perform Data Analysis using m5imu_data_analysis.py
 - What does the above program do?
   
 *Task 2*
+
 Collect smooth data using the code IMU_SD_ST_AGEQ.ino for a slow-moving action. What does the program do?
 Estimate the roll using the below methods and perform comparison to the ground-truth – How is ground-truth evaluated?
 - Linear Regression
@@ -20,6 +22,7 @@ Estimate the roll using the below methods and perform comparison to the ground-t
 - MLP NN Regression
 
 ### What should be in your report/wiki?
+
 *Task 1*
 - Process of collecting raw IMU data
 - Why perform smoothing, filtering of raw IMU data?
