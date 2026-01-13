@@ -1,0 +1,51 @@
+0. Enable the I2C bus
+sudo raspi-config
+Once configuration done
+sudo reboot
+
+1. Update and upgrade the system.
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y i2c-tools
+sudo apt install -y python3-pip
+udo apt install -y python3-smbus
+
+2. Install Git
+sudo apt install git
+
+3. Create a folder named workshop in the home directory
+mkdir workshop
+
+4.Create a python virtual environment named wshopvenv
+python -m venv wshopvenv
+
+5. Activate the wshopvenv
+source wshopvenv/bin/activate
+
+6. Install Adafruit blinka
+pip install adafruit-blinka
+
+7.Clone python libraries for the sensors
+git clone https://github.com/adafruit/Adafruit_CircuitPython_AHTx0.git
+git clone https://github.com/adafruit/Adafruit_CircuitPython_VL53L0X.git
+git clone https://github.com/adafruit/Adafruit_CircuitPython_MPU6050.git
+git clone https://github.com/jposada202020/CircuitPython_BMI160.git
+git clone https://github.com/adafruit/Adafruit_CircuitPython_APDS9960.git
+
+
+8. Install the sensor libraries
+pip install adafruit-circuitpython-ahtx0
+pip install adafruit-circuitpython-vl53l0x
+pip install adafruit-circuitpython-mpu6050
+pip install circuitpython-bmi160
+pip install adafruit-circuitpython-apds9960
+
+
+Other notes to remember:
+for mpu6050 who am I id is = 0x70
+for apds9960 id is = 0x9E
+
+Read i2c device register using smbus
+import smbus
+bus = smbus.SMBus(1)
+value = bus.read_byte_data(DEVICE_ADDR, REGISTER)
