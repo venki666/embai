@@ -3,10 +3,12 @@
 ### What do we do in this Session (Day 5.2)
 
 Codes @ http://github.com/venki666/embai
+
 *Task 1*
 - Collect raw data using the code IMU_SD_serialtrigger.ino
 - Perform Data Analysis using m5imu_data_analysis.py
 - What does the above program do?
+  
 *Task 2*
 Collect smooth data using the code IMU_SD_ST_AGEQ.ino for a slow-moving action. What does the program do?
 Estimate the roll using the below methods and perform comparison to the ground-truth – How is ground-truth evaluated?
