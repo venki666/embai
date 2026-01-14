@@ -1,3 +1,15 @@
+### This is how the /boot/firmware/config.txt should look
+
+```
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+dtparam=i2s=on
+dtparam=spi=on
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=off
+dtoverlay=googlevoicehat-soundcard
+```
 ### Create a new virtual environment
 ```
 python3 -m venv ~/audio_proj
