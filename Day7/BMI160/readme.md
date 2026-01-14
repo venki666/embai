@@ -21,10 +21,6 @@ pip install pandas
 pip install matplotlib --prefer-binary
 ```
 
-### Activate the virtual environment
-```
-source ~/imu_env/bin/activate
-```
 ### Data Collection
 Place your codes in the imu_logs directory
 ```
