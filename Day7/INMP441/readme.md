@@ -23,9 +23,6 @@ pip install sshkeyboard==2.3.1
 pip install scipy
 ```
 ```
-sudo apt update && sudo apt install libportaudio2 portaudio19-dev libatlas-base-dev python3-dev build-essential -y
-```
-```
 pip install --no-cache-dir --force-reinstall pyaudio==0.2.14
 ```
 ```
