@@ -11,11 +11,11 @@ pip install numpy
 pip install sshkeyboard==2.3.1
 pip install scipy
 pip install --no-cache-dir --force-reinstall pyaudio==0.2.14
+pip install matplotlib --prefer-binary
 ```
 
 ### Install System Dependencies
 ```
-sudo apt update && sudo apt install libportaudio2 portaudio19-dev libatlas-base-dev python3-dev build-essential -y
 sudo apt install git 
 sudo apt install htop -y
 sudo ldconfig 
@@ -25,4 +25,6 @@ sudo ldconfig
 python -c "import pyaudio; print(pyaudio.__version__)"
 chmod +x record.py
 python record.py
+python analyze_audio.py rec_key_1768431585_lp.wav
+python visualize_audio.py rec_key_1768431585_lp.wav
 ```
