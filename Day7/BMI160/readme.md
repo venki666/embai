@@ -23,7 +23,7 @@ pip install numpy ahrs
 pip install pandas
 ```
 ```
-pip install matplotlib
+pip install matplotlib --prefer-binary
 ```
 ```
 cd imu_logs/
