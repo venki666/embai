@@ -26,12 +26,6 @@ pip install pandas
 pip install matplotlib
 ```
 ```
-vim bmiscreen.py
-```
-```
-python bmiscreen.py
-```
-```
 cd imu_logs/
 ```
 ```
@@ -47,10 +41,10 @@ source ~/imu_env/bin/activate
 python bmi160_screen_fusion.py
 ```
 ```
+deactivate
+```
+```
 vim analyzebmi160.py
-```
-```
-source ~/imu_env/bin/activate
 ```
 ```
 python analyzebmi160.py ~/imu_logs/bmi160_20260113_150737.csv
