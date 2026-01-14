@@ -1,3 +1,9 @@
+```
+sudo apt install vim
+```
+```
+sudo vim /boot/firmware/config.txt
+```
 ### This is how the /boot/firmware/config.txt should look
 
 ```
