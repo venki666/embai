@@ -1,10 +1,4 @@
 ```
-sudo pip3 install pyaudio
-```
-```
-sudo pip3 install -y pyaudio
-```
-```
 sudo apt install git -y
 ```
 ```
