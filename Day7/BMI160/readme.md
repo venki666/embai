@@ -2,6 +2,9 @@
 sudo i2cdetect -y 1
 ```
 ```
+mkdir -p imu_logs
+```
+```
 python3 -m venv ~/imu_env
 ```
 ```
