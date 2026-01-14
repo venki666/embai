@@ -26,5 +26,7 @@ python -c "import pyaudio; print(pyaudio.__version__)"
 chmod +x record.py
 python record.py
 python analyze_audio.py rec_key_1768431585_lp.wav
+deactivate
+ctrl+c
 python visualize_audio.py rec_key_1768431585_lp.wav
 ```
