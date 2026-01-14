@@ -38,9 +38,6 @@ sudo ldconfig  # Updates library cache
 source ~/audio_proj/bin/activate
 ```
 ```
-deactivate
-```
-```
 vim record.py
 ```
 ```
@@ -48,4 +45,7 @@ chmod +x record.py
 ```
 ```
 python record.py
+```
+```
+python analyze_audio.py rec_key_1768431585_lp.wav
 ```
