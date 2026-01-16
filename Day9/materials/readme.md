@@ -11,7 +11,7 @@ sudo apt-get update
 sudo apt-get install python3-pyaudio libatlas-base-dev
 pip3 install sounddevice numpy librosa
 ```
-# For inference only (lighter than full tensorflow):
+###For inference only (lighter than full tensorflow):
 ```
 pip3 install tflite-runtime
 ```
