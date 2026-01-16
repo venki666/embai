@@ -7,7 +7,7 @@ Ensure you are running the 32-bit version of Raspberry Pi OS (Legacy/Buster or B
 ```
 uname -m
 ```
-# Output should be 'armv7l' (which indicates 32-bit userspace)
+Output should be 'armv7l' (which indicates 32-bit userspace)
 2. Installation Instructions
 Run the following commands on your Raspberry Pi Zero 2 W terminal to install the necessary audio drivers and the TFLite runtime.
 
