@@ -7,4 +7,5 @@ https://github.com/venki666/UAV_Workshop/tree/main/DJITelloPy/DJITelloPy-Tutoria
 ### DJI tello Control bare-bone code
 https://github.com/venki666/UAV_Workshop/tree/main/tello_python
 
-
+### DroneBlocks DJITelloPy API Tutorial
+https://github.com/dbaldwin/DroneBlocks-DJITelloPy-Tutorial/tree/master
