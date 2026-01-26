@@ -1,59 +1,79 @@
-from apds9960.const import *
-from apds9960 import APDS9960
 import smbus
 import time
 
-# 1. Initialize I2C Bus (Bus 1 is standard for Raspberry Pi)
-bus = smbus.SMBus(1)
+# --- CONFIGURATION ---
+I2C_BUS = 1
+DEVICE_ADDR = 0x39
 
-# 2. Initialize the Sensor
-apds = APDS9960(bus)
+# --- APDS9960 REGISTER MAP ---
+REG_ENABLE  = 0x80
+REG_ATIME   = 0x81
+REG_CONTROL = 0x8F
+REG_CDATAL  = 0x94 # Start of data registers (Clear Low)
 
+class APDS9960:
+    def __init__(self, bus_id=1, addr=0x39):
+        try:
+            self.bus = smbus.SMBus(bus_id)
+            self.addr = addr
+            self._setup()
+        except Exception as e:
+            print(f"Failed to initialize I2C: {e}")
+            exit(1)
 
-def setup():
-    print("Initializing APDS-9960...")
+    def _setup(self):
+        try:
+            # 1. Power ON + Enable ALS (Ambient Light Sensor)
+            # 0x03 = Power ON (Bit 0) + ALS Enable (Bit 1)
+            self.bus.write_byte_data(self.addr, REG_ENABLE, 0x03)
+            
+            # 2. Set Integration Time
+            # 0xD5 = ~100ms. Lower values = longer time/higher sensitivity.
+            self.bus.write_byte_data(self.addr, REG_ATIME, 0xD5)
+            
+            # 3. Set Gain
+            # 0x01 = 4x Gain. (0x00=1x, 0x01=4x, 0x02=16x, 0x03=60x)
+            self.bus.write_byte_data(self.addr, REG_CONTROL, 0x01)
+            
+            print(f"Sensor initialized at address 0x{self.addr:02X}")
+            time.sleep(0.5) # Allow sensor to gather first batch of light
+            
+        except OSError:
+            print(f"Error: APDS9960 not found at 0x{self.addr:02X}. Check wiring.")
+            exit(1)
 
-    # Enable the Light Sensor (ALS)
-    # This automatically turns on the power (PON) and ALS Enable (AEN)
-    apds.enableLightSensor()
+    def read_rgbc(self):
+        # Read 8 bytes: Clear(2), Red(2), Green(2), Blue(2)
+        # Block read is faster than 4 separate reads
+        data = self.bus.read_i2c_block_data(self.addr, REG_CDATAL, 8)
+        
+        # Combine Low and High bytes (Little Endian)
+        c = data[1] << 8 | data[0]
+        r = data[3] << 8 | data[2]
+        g = data[5] << 8 | data[4]
+        b = data[7] << 8 | data[6]
+        
+        return c, r, g, b
 
-    # Optional: Adjust Gain and Integration Time for clarity
-    # GAIN_1X, GAIN_4X, GAIN_16X, GAIN_64X
-    apds.setAmbientLightGain(APDS9960_AGAIN_4X)
-
-    # Integration time affects resolution.
-    # higher time = higher resolution (values up to 65535)
-    # APDS9960_ATIME_219MS is a good balance
-    # (Default is often fast/low res, setting it explicitly helps)
-    # Note: Some libraries might not expose setAmbientLightIntTime directly
-    # without looking up the constant map, but defaults usually work.
-
-    print("Sensor Ready. Reading RGB + Clear values...")
-    print("Press Ctrl+C to stop.")
-
-
-def loop():
-    while True:
-        # 3. Read raw 16-bit values (0-65535)
-        # 'Clear' is the total intensity (ambient light)
-        clear_val = apds.readAmbientLight()
-        red_val = apds.readRedLight()
-        green_val = apds.readGreenLight()
-        blue_val = apds.readBlueLight()
-
-        # 4. Print Data
-        print(f"Clear: {clear_val} | R: {red_val} G: {green_val} B: {blue_val}")
-
-        # Wait a bit before next read
-        time.sleep(0.5)
-
+def main():
+    sensor = APDS9960(I2C_BUS, DEVICE_ADDR)
+    
+    print("Reading APDS9960... (Press Ctrl+C to stop)")
+    print("-" * 40)
+    print(f"{'CLEAR':<8} {'RED':<8} {'GREEN':<8} {'BLUE':<8}")
+    print("-" * 40)
+    
+    try:
+        while True:
+            c, r, g, b = sensor.read_rgbc()
+            
+            # Print formatted output using f-strings for alignment
+            print(f"{c:<8} {r:<8} {g:<8} {b:<8}")
+            
+            time.sleep(0.5) # Read every 0.5 seconds
+            
+    except KeyboardInterrupt:
+        print("\nStopped.")
 
 if __name__ == "__main__":
-    try:
-        setup()
-        loop()
-    except KeyboardInterrupt:
-        print("\nStopping...")
-    except Exception as e:
-        print(f"\n[Error] {e}")
-        print("Check your wiring: 3.3V, GND, SDA, SCL")
+    main()
