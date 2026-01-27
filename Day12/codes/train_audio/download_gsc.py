@@ -1,83 +1,56 @@
 import os
 import tarfile
 import requests
-import io
 from tqdm import tqdm
 
 # --- Configuration ---
-# Official URL for Google Speech Commands v0.02
 DATASET_URL = "http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz"
 OUTPUT_DIR = "google_speech_commands_filtered"
-
-# The specific words you want to keep
-TARGET_WORDS = ["on", "up", "down", "left", "right", "off", "_background_noise_"]
+TARGET_DIRS = ["on", "up", "down", "left", "right", "off", "_background_noise_"]
 
 
-def download_and_extract(url, target_words, output_dir):
-    # Create output directory
+def download_and_extract(url, target_dirs, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-        print(f"[INFO] Created directory: {output_dir}")
 
-    print(f"[INFO] Downloading dataset from {url}...")
+    temp_filename = "speech_commands_temp.tar.gz"
 
-    # Stream the download to avoid memory issues (it's ~2.4GB)
-    response = requests.get(url, stream=True)
-
-    if response.status_code == 200:
-        # Get total file size for progress bar
+    # Download logic
+    if not os.path.exists(temp_filename):
+        print(f"[INFO] Downloading dataset...")
+        response = requests.get(url, stream=True)
         total_size = int(response.headers.get('content-length', 0))
-
-        # Load the stream into a TarFile object
-        # We use BytesIO to wrap the raw stream so tarfile can read it
-        # Note: This loads the archive into RAM or temp storage depending on implementation.
-        # For strictly low-RAM systems, it's safer to download to a temp file first.
-        # Below is a "Download to File then Extract" approach for stability.
-
-        temp_filename = "speech_commands_temp.tar.gz"
-
-        with open(temp_filename, 'wb') as f, tqdm(
-                desc="Downloading",
-                total=total_size,
-                unit='iB',
-                unit_scale=True,
-                unit_divisor=1024,
-        ) as bar:
+        with open(temp_filename, 'wb') as f, tqdm(total=total_size, unit='iB', unit_scale=True) as bar:
             for data in response.iter_content(chunk_size=1024):
-                size = f.write(data)
-                bar.update(size)
+                bar.update(f.write(data))
 
-        print("\n[INFO] Download complete. Extracting specific folders...")
+    print(f"[INFO] Extracting targeting: {target_dirs}")
 
-        # Open the downloaded tar file
-        with tarfile.open(temp_filename, "r:gz") as tar:
-            # Filter members
-            members_to_extract = []
-            for member in tar.getmembers():
-                # The tar file structure is flat: "word/filename.wav"
-                # We check if the file starts with one of our target words
-                for word in target_words:
-                    if member.name.startswith(word + "/"):
-                        members_to_extract.append(member)
-                        break
+    with tarfile.open(temp_filename, "r:gz") as tar:
+        members_to_extract = []
 
-            # Extract only the matching members
-            tar.extractall(path=output_dir, members=members_to_extract)
-            print(f"[SUCCESS] Extracted {len(members_to_extract)} files to '{output_dir}'")
+        for member in tar.getmembers():
+            # 1. Normalize path (removes leading './' if present)
+            clean_path = os.path.normpath(member.name)
 
-        # Cleanup temp file
-        os.remove(temp_filename)
-        print("[INFO] Temporary file removed.")
+            # 2. Split path into parts: ('on', 'file.wav') or ('.', 'on', 'file.wav')
+            # Filter out empty strings or current-dir dots from the parts
+            parts = [p for p in clean_path.split(os.sep) if p not in ('.', '')]
 
-    else:
-        print(f"[ERROR] Failed to download. Status code: {response.status_code}")
+            # 3. Match if the FIRST directory matches our target list
+            if parts and parts[0] in target_dirs:
+                members_to_extract.append(member)
+
+        if not members_to_extract:
+            print("[ERROR] No files found. Listing first 5 items in archive for debug:")
+            print(tar.getnames()[:5])
+            return
+
+        for member in tqdm(members_to_extract, desc="Extracting"):
+            tar.extract(member, path=output_dir)
+
+    print(f"\n[SUCCESS] Extracted {len(members_to_extract)} items to '{output_dir}'")
 
 
 if __name__ == "__main__":
-    # Note: Google uses "_background_noise_" with underscores in the tar file
-    # We ensure our target list matches the folder names exactly.
-    # Standard words: 'up', 'down' etc.
-    # Noise folder: '_background_noise_'
-
-    print(f"Targeting words: {TARGET_WORDS}")
-    download_and_extract(DATASET_URL, TARGET_WORDS, OUTPUT_DIR)
+    download_and_extract(DATASET_URL, TARGET_DIRS, OUTPUT_DIR)
